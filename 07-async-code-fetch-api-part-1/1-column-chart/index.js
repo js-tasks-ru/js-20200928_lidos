@@ -5,12 +5,9 @@ export default class ColumnChart {
   constructor(options = {}) {
     this.options = options;
     this.chartHeight = 50;
-    this.isLoading = false;
 
-    Promise.resolve(this.fetchData()).then((data) => {
-      this.options.data = data;
-      this.render();
-    });
+    this.render();
+    this.fetchData()
   }
 
   formatData(from, to) {
@@ -23,9 +20,6 @@ export default class ColumnChart {
   }
 
   async fetchData(updateRange) {
-    this.isLoading = true;
-    this.render();
-
     const { url } = this.options;
     const coreURL = "https://course-js.javascript.ru";
     const range = updateRange || this.options.range;
@@ -38,85 +32,73 @@ export default class ColumnChart {
       );
       const result = await response.json();
 
-      this.isLoading = Object.values(result).length ? false : true;
-
-      return Object.values(result);
-    } catch {
-      this.isLoading = false;
+      if (result && Object.values(result).length) {
+        this.subElements.body.innerHTML = this.getChart(Object.values(result));
+  
+        this.element.classList.remove('column-chart_loading');
+      }
+    } catch(err) {
     }
   }
 
-  getChart() {
-    const { label, link, value, data } = this.options;
+  getChart(data) {
+    if (!data) return
+    
     const maxValue = Math.max.apply(null, data);
     const coef = this.chartHeight / maxValue;
 
-    const showLink = link
-      ? `<a class="column-chart__link" href="${link}">View all</a>`
-      : "";
+    return (data.map(
+      (item) =>
+        `<div style="--value: ${Math.floor(
+          item * coef
+        )}" data-tooltip="${Math.round((item * 100) / maxValue)}%"></div>`
+    )
+    .join(""))
+  }
 
-    const showChart =
-      data &&
-      data
-        .map(
-          (item) =>
-            `<div style="--value: ${Math.floor(
-              item * coef
-            )}" data-tooltip="${Math.round((item * 100) / maxValue)}%"></div>`
-        )
-        .join("");
+  render() {
+    const element = document.createElement('div');
 
+    element.innerHTML = this.template;
+    this.element = element.firstElementChild;
+
+    this.subElements = this.getSubElements(this.element);
+  }
+
+  showLink() {
+    return this.options.link
+    ? `<a class="column-chart__link" href="${this.options.link}">View all</a>`
+    : "";
+  }
+
+  get template() {
     return `
-      <div class="column-chart__title">
-        Total ${label}
-        ${showLink}
-      </div>
-      <div class="column-chart__container">
-        <div data-element="header" class="column-chart__header">
-          ${value || ""}
+      <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
+        <div class="column-chart__title">
+          Total ${this.options.label}
+          ${this.showLink()}
         </div>
-        <div data-element="body" class="column-chart__chart">
-          ${showChart}
+        <div class="column-chart__container">
+          <div data-element="header" class="column-chart__header"></div>
+          <div data-element="body" class="column-chart__chart"></div>
         </div>
       </div>
     `;
   }
 
-  createDOM() {
-    const div =
-      document.querySelector(
-        `.dashboard__chart_${this.options.label} .column-chart`
-      ) || document.createElement("div");
+  getSubElements(element) {
+    const elements = element.querySelectorAll('[data-element]');
 
-    div.classList.add("column-chart");
+    return [...elements].reduce((accum, subElement) => {
+      accum[subElement.dataset.element] = subElement;
 
-    if (this.isLoading) {
-      div.classList.add("column-chart_loading");
-    } else {
-      div.classList.remove("column-chart_loading");
-    }
-
-    div.setAttribute("style", `--chart-height: ${this.chartHeight}`);
-
-    return div;
+      return accum;
+    }, {});
   }
 
-  render() {
-    this.element = this.createDOM();
-    this.element.innerHTML = this.getChart();
-
-    this.subElements.body = this.element.querySelector('[data-element="body"]');
-
-    this.subElements.innerHTML = this.getChart();
-  }
-
-  update(from, to) {
-    Promise.resolve(this.fetchData({ from, to })).then((data) => {
-      console.log(data);
-      this.options.data = data;
-      this.render();
-    });
-  }
+  async update(from, to) {
+    await this.fetchData({ from, to })
+  } 
 
   remove() {
     this.element.remove();
