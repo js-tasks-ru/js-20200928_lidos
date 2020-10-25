@@ -68,7 +68,7 @@ export default class SortableTable {
   sortedTableData(field, order) {
     const newArray = [...this.data]
     const orderType = order === 'desc' ? -1 : 1
-    const { sortType } = this.header.find(el => el.id === field)
+    const { sortType } = this.header.find(element => element.id === field)
 
     return(
       newArray.sort((a, b) => {
@@ -100,7 +100,7 @@ export default class SortableTable {
       desc: 'asc',
     }
 
-    return orderValue[order] || order
+    return orderValue[order]
   }
 
   onSortClick(event) {

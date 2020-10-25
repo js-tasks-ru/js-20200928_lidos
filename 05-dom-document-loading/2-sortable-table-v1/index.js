@@ -68,18 +68,17 @@ export default class SortableTable {
   sortedTableData(field, order) {
     const newArray = [...this.data]
     const orderType = order === 'desc' ? -1 : 1
+    const { sortType } = this.header.find(element => element.id === field)
 
     return(
       newArray.sort((a, b) => {
-        switch (field) {
-          case 'quantity':
-          case 'price':
-          case 'sales': 
+        switch (sortType) {
+          case 'number': 
             return (a[field] - b[field]) * orderType
-          case 'title':
+          case 'string':
             return (a[field].localeCompare(b[field], 'ru')) * orderType
           default:
-            break;
+            return (a[field] - b[field]) * orderType
         }
       })
     )
